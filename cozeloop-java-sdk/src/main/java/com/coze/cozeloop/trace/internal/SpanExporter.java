@@ -5,6 +5,7 @@ import com.coze.cozeloop.trace.entity.UploadSpan;
 import com.coze.cozeloop.trace.entity.UploadSpanData;
 import com.coze.cozeloop.trace.http.HttpClient;
 import com.coze.cozeloop.trace.util.JsonUtils;
+import com.coze.cozeloop.trace.entity.BaseResponse;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,16 +43,13 @@ public class SpanExporter implements Exporter {
     
     @Override
     public void exportSpans(List<Object> spans) {
-        if (spans == null || spans.isEmpty()) {
-            return;
-        }
-        
         try {
-            // 将Span转换为UploadSpan
+            // 转换为UploadSpan列表
             List<UploadSpan> uploadSpans = new ArrayList<>();
-            for (Object obj : spans) {
-                if (obj instanceof Span) {
-                    UploadSpan uploadSpan = convertSpanToUploadSpan((Span) obj);
+            for (Object span : spans) {
+                if (span instanceof Span) {
+                    Span s = (Span) span;
+                    UploadSpan uploadSpan = convertToUploadSpan(s);
                     uploadSpans.add(uploadSpan);
                 }
             }
@@ -63,8 +61,20 @@ public class SpanExporter implements Exporter {
                 
                 // 发送到CozeLoop平台（对应Go SDK的ExportSpans方法）
                 System.out.println("📤 正在上报 " + uploadSpans.size() + " 个Span到: " + spanUploadPath);
-                String response = httpClient.post(spanUploadPath, uploadData, String.class);
-                System.out.println("✅ Span上报成功，响应: " + response);
+                
+                // 使用BaseResponse处理响应（对应Go SDK的BaseResponse）
+                BaseResponse response = httpClient.post(spanUploadPath, uploadData, BaseResponse.class);
+                
+                // 检查响应码（对应Go SDK的resp.GetCode() != 0检查）
+                if (response != null && response.isSuccess()) {
+                    System.out.println("✅ Span上报成功，响应: " + response);
+                } else {
+                    String errorMsg = response != null ? 
+                        String.format("code:[%d], msg:[%s]", response.getCode(), response.getMsg()) :
+                        "response is null";
+                    System.err.println("❌ Span上报失败: " + errorMsg);
+                    throw new RuntimeException("Span export failed: " + errorMsg);
+                }
             }
             
         } catch (Exception e) {
@@ -90,7 +100,7 @@ public class SpanExporter implements Exporter {
     /**
      * 将Span转换为UploadSpan
      */
-    private UploadSpan convertSpanToUploadSpan(Span span) {
+    private UploadSpan convertToUploadSpan(Span span) {
         UploadSpan uploadSpan = new UploadSpan();
         
         // 设置基本字段
