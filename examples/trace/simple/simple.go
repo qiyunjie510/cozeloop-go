@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/coze-dev/cozeloop-go"
@@ -25,6 +26,8 @@ func main() {
 	// Set the following environment variables first (Assuming you are using a PAT token.).
 	// COZELOOP_WORKSPACE_ID=your workspace id
 	// COZELOOP_API_TOKEN=your token
+	os.Setenv("COZELOOP_WORKSPACE_ID", "7534944671286558755")
+	os.Setenv("COZELOOP_API_TOKEN", "pat_8sGW3PZB9ON8jKfWHKXGuBdv5kRq1aX9Dha3xK7bTHEXY68VJf1koIlwtfrrys9t")
 
 	// 0. new client span
 	logger.SetLogLevel(logger.LogLevelInfo)
