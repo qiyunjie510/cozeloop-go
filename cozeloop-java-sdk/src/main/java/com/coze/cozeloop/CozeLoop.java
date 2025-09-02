@@ -2,6 +2,7 @@ package com.coze.cozeloop;
 
 import com.coze.cozeloop.trace.Span;
 import com.coze.cozeloop.trace.SpanOptions;
+import com.coze.cozeloop.trace.TraceOptions;
 import com.coze.cozeloop.trace.TraceProvider;
 
 import java.util.HashMap;
@@ -77,5 +78,38 @@ public class CozeLoop {
      */
     public static TraceProvider getDefaultProvider() {
         return defaultProvider;
+    }
+    
+    /**
+     * 创建新的CozeLoop客户端（仿照Go SDK的NewClient）
+     * 自动从系统属性读取配置
+     */
+    public static CozeLoopClient newClient() {
+        // 从系统属性读取配置（对应Go SDK的buildOptionsFromEnv）
+        String workspaceID = System.getProperty("COZELOOP_WORKSPACE_ID");
+        String apiToken = System.getProperty("COZELOOP_API_TOKEN");
+        String apiBaseURL = System.getProperty("COZELOOP_API_BASE_URL");
+        
+        if (workspaceID == null || apiToken == null) {
+            throw new IllegalStateException("Missing required configuration: COZELOOP_WORKSPACE_ID and COZELOOP_API_TOKEN must be set");
+        }
+        
+        if (apiBaseURL == null) {
+            apiBaseURL = "https://api.coze.cn";  // 默认值
+        }
+        
+        // 创建TraceOptions
+        TraceOptions options = new TraceOptions();
+        options.setWorkspaceID(workspaceID);
+        options.setApiBaseURL(apiBaseURL);
+        options.setServiceName("java-sdk-client");
+        
+        // 创建TraceProvider
+        TraceProvider provider = new com.coze.cozeloop.trace.internal.DefaultTraceProvider(options);
+        
+        // 初始化CozeLoop
+        init(provider);
+        
+        return new CozeLoopClient(provider);
     }
 }

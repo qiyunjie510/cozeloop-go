@@ -54,10 +54,14 @@ public class DefaultHttpClient implements HttpClient {
             httpPost.setHeader("Content-Type", "application/json");
             httpPost.setHeader("User-Agent", "CozeLoop-Java-SDK/1.0");
             
-            // 设置认证头（从环境变量获取）
+            // 设置认证头（从系统属性获取，对应Go SDK的NewTokenAuth）
             String apiToken = System.getProperty("COZELOOP_API_TOKEN");
             if (apiToken != null && !apiToken.trim().isEmpty()) {
+                // 对应Go SDK的setAuthorizationHeader方法
                 httpPost.setHeader("Authorization", "Bearer " + apiToken);
+                System.out.println("🔐 设置认证头: Bearer " + apiToken.substring(0, Math.min(apiToken.length(), 20)) + "...");
+            } else {
+                System.err.println("⚠️  警告: 未设置COZELOOP_API_TOKEN系统属性");
             }
             
             // 设置请求体
@@ -65,6 +69,14 @@ public class DefaultHttpClient implements HttpClient {
                 String jsonData = objectMapper.writeValueAsString(data);
                 System.out.println("📤 发送请求到: " + fullURL);
                 System.out.println("📤 请求数据: " + jsonData.substring(0, Math.min(jsonData.length(), 200)) + "...");
+                // 安全地获取请求头值
+                String contentType = getHeaderValue(httpPost, "Content-Type");
+                String authorization = getHeaderValue(httpPost, "Authorization");
+                String userAgent = getHeaderValue(httpPost, "User-Agent");
+                
+                System.out.println("📤 请求头: Content-Type=" + contentType + 
+                                 ", Authorization=" + (authorization != null ? authorization.substring(0, Math.min(authorization.length(), 30)) + "..." : "null") + 
+                                 ", User-Agent=" + userAgent);
                 httpPost.setEntity(new StringEntity(jsonData, StandardCharsets.UTF_8));
             }
             
@@ -124,5 +136,17 @@ public class DefaultHttpClient implements HttpClient {
      */
     public String getBaseURL() {
         return baseURL;
+    }
+    
+    /**
+     * 安全地获取HTTP请求头的值
+     */
+    private String getHeaderValue(HttpPost httpPost, String headerName) {
+        try {
+            org.apache.http.Header header = httpPost.getFirstHeader(headerName);
+            return header != null ? header.getValue() : null;
+        } catch (Exception e) {
+            return "error";
+        }
     }
 }

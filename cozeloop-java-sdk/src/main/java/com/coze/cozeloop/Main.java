@@ -34,7 +34,10 @@ public class Main {
             // 测试5: 测试完整的Span创建流程
             testSpanCreation();
             
-            // 测试6: 测试数据上报功能
+            // 测试6: 测试认证功能
+            testAuthentication();
+            
+            // 测试7: 测试数据上报功能
             testDataExport();
             
             System.out.println("✅ 所有测试通过！");
@@ -148,15 +151,11 @@ public class Main {
             traceOptions.setWorkspaceID("7534944671286558755");  // 使用Go SDK中的workspace ID
             traceOptions.setServiceName("java-sdk-example");     // 标识这是Java SDK示例
             
-            // 创建TraceProvider
-            com.coze.cozeloop.trace.internal.DefaultTraceProvider provider = 
-                new com.coze.cozeloop.trace.internal.DefaultTraceProvider(traceOptions);
-            
-            // 初始化CozeLoop
-            CozeLoop.init(provider);
+            // 使用Go SDK风格的客户端创建方法
+            CozeLoopClient client = CozeLoop.newClient();
             
             // 1. 创建根Span（仿照Go SDK的root_span）
-            Span rootSpan = CozeLoop.startSpan("root_span", "main_span");
+            Span rootSpan = client.startSpan("root_span", "main_span");
             
             // 2. 设置自定义标签（仿照Go SDK的SetTags）
             Map<String, Object> customTags = new HashMap<>();
@@ -179,7 +178,7 @@ public class Main {
             
             // 4. 模拟LLM调用（仿照Go SDK的llmCall方法）
             try {
-                simulateLLMCall(rootSpan);
+                simulateLLMCall(client, rootSpan);
             } catch (Exception e) {
                 // 设置错误状态码和错误信息（仿照Go SDK的错误处理）
                 rootSpan.setStatusCode(600789111);  // 使用Go SDK中的错误码
@@ -198,16 +197,68 @@ public class Main {
             
             // 7. 强制刷新队列（仿照Go SDK的Flush）
             System.out.println("   🔄 强制刷新队列...");
-            CozeLoop.flush();
+            client.flush();
             System.out.println("   ✅ 队列刷新完成");
             
             // 8. 关闭CozeLoop（可选，仿照Go SDK的Close）
             System.out.println("   🔄 关闭CozeLoop...");
-            CozeLoop.close();
+            client.close();
             System.out.println("   ✅ CozeLoop关闭完成");
             
         } catch (Exception e) {
             System.out.println("   ❌ Span创建失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 测试认证功能
+     */
+    private static void testAuthentication() {
+        System.out.println("\n📋 测试6: 认证功能测试");
+        
+        try {
+            // 检查系统属性设置
+            String workspaceID = System.getProperty("COZELOOP_WORKSPACE_ID");
+            String apiToken = System.getProperty("COZELOOP_API_TOKEN");
+            
+            System.out.println("   🔍 检查认证配置:");
+            System.out.println("     - Workspace ID: " + (workspaceID != null ? workspaceID : "未设置"));
+            System.out.println("     - API Token: " + (apiToken != null ? apiToken.substring(0, Math.min(apiToken.length(), 20)) + "..." : "未设置"));
+            
+            if (workspaceID == null || apiToken == null) {
+                System.err.println("   ❌ 认证配置不完整，请检查系统属性设置");
+                return;
+            }
+            
+            // 测试简单的HTTP请求
+            System.out.println("   🔄 测试简单HTTP请求...");
+            com.coze.cozeloop.trace.http.DefaultHttpClient httpClient = 
+                new com.coze.cozeloop.trace.http.DefaultHttpClient("https://api.coze.cn");
+            
+            try {
+                // 测试1: 尝试访问trace API（需要认证）
+                System.out.println("   🔄 测试1: 访问trace API...");
+                try {
+                    String response = httpClient.post("/v1/loop/traces/ingest", 
+                        "{\"spans\":[]}", String.class);
+                    System.out.println("   ✅ Trace API访问成功: " + response);
+                } catch (Exception e) {
+                    System.out.println("   ⚠️  Trace API访问失败: " + e.getMessage());
+                    if (e.getMessage().contains("403")) {
+                        System.out.println("   💡 提示: 403错误通常表示权限不足，请检查:");
+                        System.out.println("      - Workspace ID是否正确");
+                        System.out.println("      - API Token是否有效");
+                        System.out.println("      - 是否有访问trace API的权限");
+                    }
+                }
+                
+            } finally {
+                httpClient.close();
+            }
+            
+        } catch (Exception e) {
+            System.out.println("   ❌ 认证测试异常: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -275,7 +326,7 @@ public class Main {
     /**
      * 模拟LLM调用（仿照Go SDK的llmCall方法）
      */
-    private static void simulateLLMCall(Span parentSpan) throws Exception {
+    private static void simulateLLMCall(CozeLoopClient client, Span parentSpan) throws Exception {
         System.out.println("   🔄 开始模拟LLM调用...");
         
         // 创建子Span（仿照Go SDK的llmCall span）
@@ -283,7 +334,7 @@ public class Main {
         childOptions.setParentSpanID(parentSpan.getSpanID());
         childOptions.setTraceID(parentSpan.getTraceID());
         
-        Span llmSpan = CozeLoop.startSpan("llmCall", "v_model_span", childOptions);
+        Span llmSpan = client.startSpan("llmCall", "v_model_span", childOptions);
         
         try {
             // 模拟LLM处理时间
