@@ -125,12 +125,8 @@ public class DefaultTraceProvider implements TraceProvider {
             baseURL = "https://api.coze.cn";
         }
         
-        // 创建导出器
-        SpanExporter exporter = new SpanExporter(
-            new DefaultHttpClient(baseURL),
-            "/api/v1/trace/spans",
-            "/api/v1/trace/files"
-        );
+        // 创建导出器（使用Go SDK的默认路径）
+        SpanExporter exporter = new SpanExporter(new DefaultHttpClient(baseURL));
         
         // 创建批量处理器
         return new BatchSpanProcessor(options, exporter);

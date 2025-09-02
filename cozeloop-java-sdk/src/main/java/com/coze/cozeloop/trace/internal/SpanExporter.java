@@ -2,6 +2,7 @@ package com.coze.cozeloop.trace.internal;
 
 import com.coze.cozeloop.trace.Span;
 import com.coze.cozeloop.trace.entity.UploadSpan;
+import com.coze.cozeloop.trace.entity.UploadSpanData;
 import com.coze.cozeloop.trace.http.HttpClient;
 import com.coze.cozeloop.trace.util.JsonUtils;
 
@@ -30,6 +31,15 @@ public class SpanExporter implements Exporter {
         this.fileUploadPath = fileUploadPath;
     }
     
+    /**
+     * 构造函数（使用默认路径）
+     */
+    public SpanExporter(HttpClient httpClient) {
+        this.httpClient = httpClient;
+        this.spanUploadPath = "/v1/loop/traces/ingest";  // 对应Go SDK的pathIngestTrace
+        this.fileUploadPath = "/v1/loop/files/upload";   // 对应Go SDK的pathUploadFile
+    }
+    
     @Override
     public void exportSpans(List<Object> spans) {
         if (spans == null || spans.isEmpty()) {
@@ -47,13 +57,20 @@ public class SpanExporter implements Exporter {
             }
             
             if (!uploadSpans.isEmpty()) {
-                // 发送到CozeLoop平台
-                httpClient.post(spanUploadPath, uploadSpans, String.class);
+                // 创建UploadSpanData结构（对应Go SDK的UploadSpanData）
+                UploadSpanData uploadData = new UploadSpanData();
+                uploadData.setSpans(uploadSpans);
+                
+                // 发送到CozeLoop平台（对应Go SDK的ExportSpans方法）
+                System.out.println("📤 正在上报 " + uploadSpans.size() + " 个Span到: " + spanUploadPath);
+                String response = httpClient.post(spanUploadPath, uploadData, String.class);
+                System.out.println("✅ Span上报成功，响应: " + response);
             }
             
         } catch (Exception e) {
             // TODO: 添加重试机制和错误处理
-            System.err.println("Failed to export spans: " + e.getMessage());
+            System.err.println("❌ Span上报失败: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     

@@ -5,8 +5,10 @@ package com.coze.cozeloop.trace.constants;
  */
 public class TraceConstants {
     
-    // 默认API基础URL
-    public static final String DEFAULT_API_BASE_URL = "https://api.coze.cn";
+    // 默认API基础URL（对应Go SDK）
+    public static final String DEFAULT_API_BASE_URL = "https://api.coze.cn";  // 对应Go: CnBaseURL
+    public static final String DEFAULT_TIMEOUT_MS = "3000";  // 对应Go: DefaultTimeout (3秒)
+    public static final String DEFAULT_UPLOAD_TIMEOUT_MS = "30000";  // 对应Go: DefaultUploadTimeout (30秒)
     
     // W3C Trace Context标准Header
     public static final String TRACE_CONTEXT_HEADER_PARENT = "X-Cozeloop-Traceparent";
@@ -17,10 +19,11 @@ public class TraceConstants {
     public static final int DEFAULT_BATCH_SIZE = 100;
     public static final long DEFAULT_FLUSH_INTERVAL_MS = 5000;
     
-    // 标签配置常量
-    public static final int MAX_TAG_KV_COUNT_IN_ONE_SPAN = 100;
-    public static final int MAX_BYTES_OF_ONE_TAG_VALUE_DEFAULT = 1024;
-    public static final int MAX_BYTES_OF_ONE_TAG_VALUE_OF_INPUT_OUTPUT = 8192;
+    // 标签配置常量（对应Go SDK的consts包）
+    public static final int MAX_TAG_KV_COUNT_IN_ONE_SPAN = 50;  // 对应Go: MaxTagKvCountInOneSpan
+    public static final int MAX_BYTES_OF_ONE_TAG_VALUE_DEFAULT = 1024;  // 对应Go: MaxBytesOfOneTagValueDefault
+    public static final int MAX_BYTES_OF_ONE_TAG_VALUE_OF_INPUT_OUTPUT = 1024 * 1024;  // 对应Go: MaxBytesOfOneTagValueOfInputOutput (1MB)
+    public static final int TEXT_TRUNCATE_CHAR_LENGTH = 1000;  // 对应Go: TextTruncateCharLength
     
     // 文件类型常量
     public static final String FILE_TYPE_TEXT = "text";

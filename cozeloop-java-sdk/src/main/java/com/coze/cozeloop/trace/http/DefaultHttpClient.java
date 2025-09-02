@@ -54,17 +54,34 @@ public class DefaultHttpClient implements HttpClient {
             httpPost.setHeader("Content-Type", "application/json");
             httpPost.setHeader("User-Agent", "CozeLoop-Java-SDK/1.0");
             
+            // 设置认证头（从环境变量获取）
+            String apiToken = System.getProperty("COZELOOP_API_TOKEN");
+            if (apiToken != null && !apiToken.trim().isEmpty()) {
+                httpPost.setHeader("Authorization", "Bearer " + apiToken);
+            }
+            
             // 设置请求体
             if (data != null) {
                 String jsonData = objectMapper.writeValueAsString(data);
+                System.out.println("📤 发送请求到: " + fullURL);
+                System.out.println("📤 请求数据: " + jsonData.substring(0, Math.min(jsonData.length(), 200)) + "...");
                 httpPost.setEntity(new StringEntity(jsonData, StandardCharsets.UTF_8));
             }
             
             // 发送请求
             try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+                int statusCode = response.getStatusLine().getStatusCode();
+                System.out.println("📥 响应状态码: " + statusCode);
+                
                 HttpEntity entity = response.getEntity();
                 if (entity != null) {
                     String responseBody = EntityUtils.toString(entity, StandardCharsets.UTF_8);
+                    System.out.println("📥 响应内容: " + responseBody);
+                    
+                    // 检查HTTP状态码
+                    if (statusCode >= 400) {
+                        throw new RuntimeException("HTTP request failed with status " + statusCode + ": " + responseBody);
+                    }
                     
                     // 如果响应类型是String，直接返回
                     if (responseType == String.class) {
