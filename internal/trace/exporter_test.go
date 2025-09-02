@@ -21,7 +21,7 @@ func Test_ExportSpans(t *testing.T) {
 		// 创建mock的httpclient
 		mockClient := &httpclient.Client{}
 		Mock(mockClient.Post).Return(nil).Build()
-		
+
 		// 创建SpanExporter实例
 		exporter := &SpanExporter{
 			client: mockClient,
@@ -30,7 +30,7 @@ func Test_ExportSpans(t *testing.T) {
 				fileUploadPath: "/test/file",
 			},
 		}
-		
+
 		err := exporter.ExportSpans(ctx, spans)
 		So(err, ShouldBeNil)
 	})
