@@ -46,15 +46,7 @@ public class Main {
         System.setProperty("COZELOOP_API_BASE_URL", "https://api.coze.cn");
         
         try {
-            // 测试1: 基础功能测试
-            // testBasicFunctionality(); // This method does not exist in the original file
-            
-            // 测试2: Span创建测试
-//            testSpanCreation();
-            
-            // 测试5: 简单HTTP请求测试
-            testSimpleHttpRequest();
-            
+            testSpanCreation();
             System.out.println("\n🎉 所有测试完成！");
             
         } catch (Exception e) {
