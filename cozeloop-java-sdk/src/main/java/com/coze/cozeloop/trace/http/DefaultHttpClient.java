@@ -1,0 +1,111 @@
+package com.coze.cozeloop.trace.http;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
+/**
+ * 默认HTTP客户端实现，对应Go代码中的httpclient包
+ * 使用Apache HttpClient来发送HTTP请求
+ */
+public class DefaultHttpClient implements HttpClient {
+    
+    private final CloseableHttpClient httpClient;
+    private final ObjectMapper objectMapper;
+    private final String baseURL;
+    
+    /**
+     * 构造函数
+     */
+    public DefaultHttpClient(String baseURL) {
+        this.baseURL = baseURL;
+        this.httpClient = HttpClients.createDefault();
+        this.objectMapper = new ObjectMapper();
+    }
+    
+    @Override
+    public <T> T post(String url, Object data, Class<T> responseType) {
+        return post(url, data, null, responseType);
+    }
+    
+    @Override
+    public <T> T post(String url, Object data, Map<String, String> headers, Class<T> responseType) {
+        String fullURL = baseURL + url;
+        HttpPost httpPost = new HttpPost(fullURL);
+        
+        try {
+            // 设置请求头
+            if (headers != null) {
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                    httpPost.setHeader(entry.getKey(), entry.getValue());
+                }
+            }
+            
+            // 设置默认请求头
+            httpPost.setHeader("Content-Type", "application/json");
+            httpPost.setHeader("User-Agent", "CozeLoop-Java-SDK/1.0");
+            
+            // 设置请求体
+            if (data != null) {
+                String jsonData = objectMapper.writeValueAsString(data);
+                httpPost.setEntity(new StringEntity(jsonData, StandardCharsets.UTF_8));
+            }
+            
+            // 发送请求
+            try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+                HttpEntity entity = response.getEntity();
+                if (entity != null) {
+                    String responseBody = EntityUtils.toString(entity, StandardCharsets.UTF_8);
+                    
+                    // 如果响应类型是String，直接返回
+                    if (responseType == String.class) {
+                        return responseType.cast(responseBody);
+                    }
+                    
+                    // 否则尝试解析JSON
+                    if (!responseBody.trim().isEmpty()) {
+                        return objectMapper.readValue(responseBody, responseType);
+                    }
+                }
+                
+                // 如果没有响应体，尝试创建默认实例
+                return responseType.getDeclaredConstructor().newInstance();
+            }
+            
+        } catch (Exception e) {
+            throw new RuntimeException("HTTP POST request failed: " + e.getMessage(), e);
+        }
+    }
+    
+    @Override
+    public <T> T uploadFile(String url, String fileKey, byte[] fileData, Map<String, String> metadata, Class<T> responseType) {
+        // TODO: 实现文件上传功能
+        // 这里需要实现multipart/form-data的上传
+        throw new UnsupportedOperationException("File upload not implemented yet");
+    }
+    
+    @Override
+    public void close() {
+        try {
+            httpClient.close();
+        } catch (IOException e) {
+            // 忽略关闭时的异常
+        }
+    }
+    
+    /**
+     * 获取基础URL
+     */
+    public String getBaseURL() {
+        return baseURL;
+    }
+}

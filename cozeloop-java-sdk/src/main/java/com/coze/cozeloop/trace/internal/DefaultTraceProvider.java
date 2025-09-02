@@ -6,6 +6,8 @@ import com.coze.cozeloop.trace.SpanOptions;
 import com.coze.cozeloop.trace.TraceProvider;
 import com.coze.cozeloop.trace.TraceOptions;
 import com.coze.cozeloop.trace.util.IdGenerator;
+import com.coze.cozeloop.trace.http.DefaultHttpClient;
+import com.coze.cozeloop.trace.internal.SpanExporter;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -117,8 +119,21 @@ public class DefaultTraceProvider implements TraceProvider {
      * 创建SpanProcessor
      */
     private SpanProcessor createSpanProcessor() {
-        // TODO: 实现SpanProcessor的创建逻辑
-        return new NoOpSpanProcessor();
+        // 创建HTTP客户端
+        String baseURL = options.getApiBaseURL();
+        if (baseURL == null || baseURL.trim().isEmpty()) {
+            baseURL = "https://api.coze.cn";
+        }
+        
+        // 创建导出器
+        SpanExporter exporter = new SpanExporter(
+            new DefaultHttpClient(baseURL),
+            "/api/v1/trace/spans",
+            "/api/v1/trace/files"
+        );
+        
+        // 创建批量处理器
+        return new BatchSpanProcessor(options, exporter);
     }
     
     /**

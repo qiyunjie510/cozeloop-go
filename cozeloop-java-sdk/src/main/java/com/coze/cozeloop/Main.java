@@ -29,6 +29,9 @@ public class Main {
             // 测试4: 测试HTTP Header转换
             testHeaderConversion();
             
+            // 测试5: 测试完整的Span创建流程
+            testSpanCreation();
+            
             System.out.println("✅ 所有测试通过！");
             
         } catch (Exception e) {
@@ -124,20 +127,60 @@ public class Main {
     }
     
     /**
-     * 测试Span创建（模拟）
+     * 测试完整的Span创建流程
      */
     private static void testSpanCreation() {
-        System.out.println("\n📋 测试5: Span创建（模拟）");
+        System.out.println("\n📋 测试5: 完整的Span创建流程");
         
-        System.out.println("   创建Span功能需要实现DefaultSpan和DefaultTraceProvider");
-        System.out.println("   当前状态: 接口已定义，实现类待创建");
-        
-        // 模拟Span创建流程
-        System.out.println("   模拟流程:");
-        System.out.println("   1. 创建SpanOptions");
-        System.out.println("   2. 调用TraceProvider.startSpan()");
-        System.out.println("   3. 设置Span属性");
-        System.out.println("   4. 调用Span.finish()");
-        System.out.println("   5. 数据进入队列等待导出");
+        try {
+            // 创建TraceOptions
+            TraceOptions traceOptions = new TraceOptions();
+            traceOptions.setApiBaseURL("https://api.coze.cn");
+            traceOptions.setWorkspaceID("test-workspace");
+            traceOptions.setServiceName("test-service");
+            
+            // 创建TraceProvider
+            com.coze.cozeloop.trace.internal.DefaultTraceProvider provider = 
+                new com.coze.cozeloop.trace.internal.DefaultTraceProvider(traceOptions);
+            
+            // 初始化CozeLoop
+            CozeLoop.init(provider);
+            
+            // 创建Span
+            Span span = CozeLoop.startSpan("test-operation", "test-type");
+            span.setTag("test-key", "test-value");
+            span.setInput("test input data");
+            span.setOutput("test output data");
+            span.setBaggage("user-id", "user123");
+            span.setBaggage("request-id", "req456");
+            
+            System.out.println("   ✅ Span创建成功:");
+            System.out.println("     - SpanID: " + span.getSpanID());
+            System.out.println("     - TraceID: " + span.getTraceID());
+            System.out.println("     - Name: " + span.getSpanName());
+            System.out.println("     - Type: " + span.getSpanType());
+            System.out.println("     - WorkspaceID: " + span.getSpaceID());
+            
+            // 测试Header转换
+            Map<String, String> headers = span.toHeader();
+            System.out.println("   ✅ Header转换成功:");
+            headers.forEach((key, value) -> System.out.println("     " + key + ": " + value));
+            
+            // 完成Span
+            span.finish();
+            System.out.println("   ✅ Span完成，持续时间: " + span.getDuration() + " 微秒");
+            
+            // 刷新队列
+            CozeLoop.flush();
+            System.out.println("   ✅ 队列刷新完成");
+            
+            // 关闭
+            CozeLoop.close();
+            System.out.println("   ✅ CozeLoop关闭完成");
+            
+        } catch (Exception e) {
+            System.out.println("   ❌ Span创建失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
