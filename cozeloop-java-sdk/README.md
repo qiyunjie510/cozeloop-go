@@ -97,11 +97,16 @@ Span childSpan = CozeLoop.startSpan("service_b", "main",
 - [x] 项目结构创建
 - [x] 核心接口定义
 - [x] 基础类设计
+- [x] 实体类创建
+- [x] 常量类创建
+- [x] 工具类创建
+- [x] 实现类骨架
+- [x] 测试类骨架
 
 ### 进行中
-- [ ] DefaultSpan实现
-- [ ] DefaultTraceProvider实现
+- [ ] 核心逻辑实现
 - [ ] 队列管理实现
+- [ ] 数据导出实现
 
 ### 待完成
 - [ ] 数据导出实现
