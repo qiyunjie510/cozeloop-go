@@ -114,7 +114,7 @@ public class Main {
         childOptions.setParentSpanID(parentSpan.getSpanID());
         childOptions.setTraceID(parentSpan.getTraceID());
         
-        Span llmSpan = client.startSpan("llmCall", "v_model_span", childOptions);
+        Span llmSpan = client.startSpan("llmCall", "model", childOptions);
         
         try {
             // 模拟LLM处理时间

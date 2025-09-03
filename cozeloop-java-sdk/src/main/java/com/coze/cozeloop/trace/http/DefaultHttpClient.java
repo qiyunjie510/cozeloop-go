@@ -80,7 +80,7 @@ public class DefaultHttpClient implements HttpClient {
                 objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
                 String jsonData = objectMapper.writeValueAsString(data);
                 System.out.println("📤 发送请求到: " + fullURL);
-                System.out.println("📤 请求数据: " + jsonData.substring(0, Math.min(jsonData.length(), 200)) + "...");
+                System.out.println("📤 请求数据: " + jsonData);
                 
                 // 打印所有请求头（调试用）
                 System.out.println("📤 请求头详情:");

@@ -22,11 +22,14 @@ public interface Span {
      * 设置输入
      */
     void setInput(Object input);
-    
+
+    Object getInput();
     /**
      * 设置输出
      */
     void setOutput(Object output);
+
+    Object getOutput();
     
     /**
      * 设置Baggage（跨Span传递的上下文信息）

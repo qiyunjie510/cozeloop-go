@@ -19,6 +19,8 @@ public class DefaultSpan implements Span {
     private final SpanContext spanContext;
     
     // 基本参数
+    private Object input;
+    private Object output;
     private final String spanType;
     private final String name;
     private final String workspaceID;
@@ -71,14 +73,24 @@ public class DefaultSpan implements Span {
     
     @Override
     public void setInput(Object input) {
-        setTag("input", input);
+        this.input = input;
     }
-    
+
+    @Override
+    public Object getInput() {
+        return this.input;
+    }
+
     @Override
     public void setOutput(Object output) {
-        setTag("output", output);
+        this.output = output;
     }
-    
+
+    @Override
+    public Object getOutput() {
+        return this.output;
+    }
+
     @Override
     public void setBaggage(Map<String, String> baggage) {
         if (baggage != null) {

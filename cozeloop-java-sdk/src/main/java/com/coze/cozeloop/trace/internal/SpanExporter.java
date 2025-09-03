@@ -104,6 +104,13 @@ public class SpanExporter implements Exporter {
         UploadSpan uploadSpan = new UploadSpan();
         
         // 设置基本字段
+        uploadSpan.setLogID("");
+        uploadSpan.setServiceName("");
+        uploadSpan.setInput(span.getInput() != null ? span.getInput().toString() : "");
+        uploadSpan.setOutput(span.getOutput() != null ? span.getOutput().toString() : "");
+        uploadSpan.setObjectStorage("");
+        uploadSpan.setSystemTagsString(new HashMap<>());
+
         uploadSpan.setSpanID(span.getSpanID());
         uploadSpan.setTraceID(span.getTraceID());
         uploadSpan.setParentID(span.getParentID());
