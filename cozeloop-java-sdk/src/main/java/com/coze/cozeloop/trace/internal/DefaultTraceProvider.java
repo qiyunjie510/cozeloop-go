@@ -53,7 +53,7 @@ public class DefaultTraceProvider implements TraceProvider {
         DefaultSpan span = new DefaultSpan(name, spanType, 
             options.getWorkspaceID() != null ? options.getWorkspaceID() : this.options.getWorkspaceID(),
             options.getParentSpanID() != null ? options.getParentSpanID() : "0",
-            options.getTraceID() != null ? options.getTraceID() : IdGenerator.gen32CharID());
+            options.getTraceID() != null ? options.getTraceID() : IdGen.nextHexTraceId());
         
         // 设置SpanProcessor
         span.setSpanProcessor(spanProcessor);

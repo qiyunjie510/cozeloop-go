@@ -46,9 +46,9 @@ public class DefaultSpan implements Span {
         this.parentSpanID = parentSpanID;
         this.startTime = Instant.now();
         
-        // 生成新的Span ID和Trace ID
-        String spanID = IdGenerator.gen16CharID();
-        String finalTraceID = traceID != null ? traceID : IdGenerator.gen32CharID();
+        // 生成新的Span ID和Trace ID，使用Go SDK兼容的ID生成器
+        String spanID = com.coze.cozeloop.trace.internal.IdGen.nextHexId();
+        String finalTraceID = traceID != null ? traceID : com.coze.cozeloop.trace.internal.IdGen.nextHexTraceId();
         
         this.spanContext = new SpanContext(spanID, finalTraceID);
         this.tagMap = new HashMap<>();
