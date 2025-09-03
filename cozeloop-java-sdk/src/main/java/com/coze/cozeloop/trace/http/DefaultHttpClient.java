@@ -2,6 +2,7 @@ package com.coze.cozeloop.trace.http;
 
 import com.coze.cozeloop.trace.entity.BaseResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -76,6 +77,7 @@ public class DefaultHttpClient implements HttpClient {
             
             // 5. 设置请求体
             if (data != null) {
+                objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
                 String jsonData = objectMapper.writeValueAsString(data);
                 System.out.println("📤 发送请求到: " + fullURL);
                 System.out.println("📤 请求数据: " + jsonData.substring(0, Math.min(jsonData.length(), 200)) + "...");
@@ -104,21 +106,6 @@ public class DefaultHttpClient implements HttpClient {
                     String responseBody = EntityUtils.toString(entity, StandardCharsets.UTF_8);
                     System.out.println("📥 响应内容: " + responseBody);
                     
-                    // 8. 检查HTTP状态码（对应Go SDK的状态码检查）
-                    if (statusCode >= 400) {
-                        // 尝试解析OAuth错误（对应Go SDK的checkOAuthError）
-                        try {
-                            if (responseBody.contains("error_code") || responseBody.contains("errorCode")) {
-                                System.err.println("❌ OAuth认证失败: " + responseBody);
-                                throw new RuntimeException("OAuth authentication failed: " + responseBody);
-                            }
-                        } catch (Exception e) {
-                            // 忽略解析错误
-                        }
-                        
-                        throw new RuntimeException("HTTP request failed with status " + statusCode + ": " + responseBody);
-                    }
-                    
                     // 9. 处理响应（对应Go SDK的parseResponse）
                     if (responseType == String.class) {
                         return responseType.cast(responseBody);
@@ -126,23 +113,11 @@ public class DefaultHttpClient implements HttpClient {
                     
                     // 10. 解析JSON响应
                     if (!responseBody.trim().isEmpty()) {
-                        T result = objectMapper.readValue(responseBody, responseType);
-                        
-                        // 设置LogID（对应Go SDK的resp.SetLogID）
-                        if (result instanceof BaseResponse) {
-                            ((BaseResponse) result).setLogID(logID);
-                        }
-                        
-                        return result;
+                        return objectMapper.readValue(responseBody, responseType);
                     }
                 }
-                
-                // 11. 创建默认响应实例
-                T result = responseType.getDeclaredConstructor().newInstance();
-                if (result instanceof BaseResponse) {
-                    ((BaseResponse) result).setLogID(logID);
-                }
-                return result;
+
+                return null;
             }
             
         } catch (Exception e) {

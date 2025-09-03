@@ -8,21 +8,13 @@ public class BaseResponse {
     
     private int code;
     private String msg;
-    private String logID;
+    private Object detail;
     
     /**
      * 默认构造函数
      */
     public BaseResponse() {}
-    
-    /**
-     * 构造函数
-     */
-    public BaseResponse(int code, String msg, String logID) {
-        this.code = code;
-        this.msg = msg;
-        this.logID = logID;
-    }
+
     
     /**
      * 获取响应码
@@ -55,15 +47,15 @@ public class BaseResponse {
     /**
      * 获取日志ID
      */
-    public String getLogID() {
-        return logID;
+    public Object getDetail() {
+        return detail;
     }
     
     /**
      * 设置日志ID
      */
-    public void setLogID(String logID) {
-        this.logID = logID;
+    public void setDetail(Object detail) {
+        this.detail = detail;
     }
     
     /**
@@ -78,7 +70,7 @@ public class BaseResponse {
         return "BaseResponse{" +
                 "code=" + code +
                 ", msg='" + msg + '\'' +
-                ", logID='" + logID + '\'' +
+                ", detail='" + detail.toString() + '\'' +
                 '}';
     }
 }

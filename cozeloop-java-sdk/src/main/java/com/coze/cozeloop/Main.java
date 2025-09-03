@@ -13,29 +13,6 @@ import java.util.List;
  * 主测试类，用于测试Java SDK的基本功能
  */
 public class Main {
-    
-    /**
-     * 测试7: 简单HTTP请求测试
-     */
-    private static void testSimpleHttpRequest() {
-        System.out.println("\n📋 测试7: 简单HTTP请求测试");
-        
-        try {
-            // 创建HTTP客户端
-            com.coze.cozeloop.trace.http.DefaultHttpClient httpClient = new com.coze.cozeloop.trace.http.DefaultHttpClient("https://api.coze.cn");
-            
-            // 测试简单的POST请求
-            String testData = "{\"test\": \"hello\"}";
-            System.out.println("🔄 发送测试请求...");
-            
-            String response = httpClient.post("/v1/loop/traces/ingest", testData, String.class);
-            System.out.println("✅ 测试请求成功，响应: " + response);
-            
-        } catch (Exception e) {
-            System.err.println("❌ 测试请求失败: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
 
     public static void main(String[] args) {
         System.out.println("🚀 启动CozeLoop Java SDK测试...");
@@ -54,24 +31,17 @@ public class Main {
             e.printStackTrace();
         }
     }
-
     
     /**
      * 测试完整的Span创建流程 - 仿照Go SDK的examples/trace/simple/simple.go
      */
     private static void testSpanCreation() {
-        System.out.println("\n📋 测试5: 完整的Span创建流程（仿照Go SDK）");
+        System.out.println("\n📋完整的Span创建流程（仿照Go SDK）");
         
         try {
             // 设置环境变量（仿照Go SDK）
             System.setProperty("COZELOOP_WORKSPACE_ID", "7534944671286558755");
             System.setProperty("COZELOOP_API_TOKEN", "pat_8sGW3PZB9ON8jKfWHKXGuBdv5kRq1aX9Dha3xK7bTHEXY68VJf1koIlwtfrrys9t");
-            
-            // 创建TraceOptions（仿照Go SDK的配置）
-            TraceOptions traceOptions = new TraceOptions();
-            traceOptions.setApiBaseURL("https://api.coze.cn");
-            traceOptions.setWorkspaceID("7534944671286558755");  // 使用Go SDK中的workspace ID
-            traceOptions.setServiceName("java-sdk-example");     // 标识这是Java SDK示例
             
             // 使用Go SDK风格的客户端创建方法
             CozeLoopClient client = CozeLoop.newClient();
