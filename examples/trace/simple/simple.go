@@ -91,6 +91,10 @@ func main() {
 	// 1. start span
 	ctx, span := client.StartSpan(ctx, "root_span", "main_span", nil)
 
+	// Set root span input - user's original query
+	userQuery := "你好"
+	span.SetInput(ctx, userQuery)
+
 	// 2. span set tag or baggage
 	// set custom tag
 	span.SetTags(ctx, map[string]interface{}{
@@ -107,12 +111,23 @@ func main() {
 	// set baggage key: `user_id`, implicitly set tag key: `user_id`
 	span.SetUserIDBaggage(ctx, "123456")
 
+	// Set additional system fields for root span
+	span.SetServiceName(ctx, "chat-service")
+	span.SetLogID(ctx, "202511062101-"+client.GetWorkspaceID())
+	span.SetDeploymentEnv(ctx, "test")
+
+	// Store the user query for llm call
+	var llmResponse []string
+
 	// assuming call llm
-	if err = llmRunner.llmCall(ctx); err != nil {
+	if err = llmRunner.llmCall(ctx, userQuery, &llmResponse); err != nil {
 		// set tag key: `_status_code`
 		span.SetStatusCode(ctx, errCodeLLMCall)
 		// set tag key: `error`, if `_status_code` value is not defined, `_status_code` value will be set -1.
 		span.SetError(ctx, err)
+	} else {
+		// Set root span output with the LLM response
+		span.SetOutput(ctx, llmResponse)
 	}
 
 	// 3. span finish
@@ -131,7 +146,7 @@ func main() {
 	//client.Close(ctx)
 }
 
-func (r *llmRunner) llmCall(ctx context.Context) (err error) {
+func (r *llmRunner) llmCall(ctx context.Context, input string, output *[]string) (err error) {
 	ctx, span := r.client.StartSpan(ctx, "llmCall", tracespec.VModelSpanType, nil)
 	defer span.Finish(ctx)
 
@@ -143,7 +158,6 @@ func (r *llmRunner) llmCall(ctx context.Context) (err error) {
 	modelName := "deepseek-chat"
 
 	// Prepare the request payload - simple text only
-	input := "你好"
 	requestPayload := OpenAIRequest{
 		Model: modelName,
 		Messages: []OpenAIMessage{
@@ -222,6 +236,9 @@ func (r *llmRunner) llmCall(ctx context.Context) (err error) {
 		respChoices = append(respChoices, choice.Message.Content)
 	}
 
+	// Set output parameter for root span
+	*output = respChoices
+
 	// Print success info for verification
 	fmt.Printf("OpenAI API call successful!\n")
 	fmt.Printf("Input: %s\n", input)
@@ -237,6 +254,13 @@ func (r *llmRunner) llmCall(ctx context.Context) (err error) {
 	span.SetInputTokens(ctx, openaiResp.Usage.PromptTokens)
 	span.SetOutputTokens(ctx, openaiResp.Usage.CompletionTokens)
 	span.SetModelName(ctx, modelName)
+
+	// Set additional model call options for completeness
+	span.SetModelCallOptions(ctx, map[string]interface{}{
+		"temperature": 0.7,
+		"max_tokens":  2048,
+		"top_p":       1.0,
+	})
 
 	fmt.Println("Span tags set successfully")
 	return nil
