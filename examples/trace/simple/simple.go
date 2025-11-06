@@ -4,7 +4,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -18,6 +22,47 @@ type llmRunner struct {
 	client cozeloop.Client
 }
 
+// OpenAI API request/response structures
+type OpenAIMessage struct {
+	Role    string        `json:"role"`
+	Content []interface{} `json:"content"`
+}
+
+type TextContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+type ImageContent struct {
+	Type     string `json:"type"`
+	ImageURL struct {
+		URL string `json:"url"`
+	} `json:"image_url"`
+}
+
+type OpenAIRequest struct {
+	Model    string          `json:"model"`
+	Messages []OpenAIMessage `json:"messages"`
+}
+
+type OpenAIChoice struct {
+	Message struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	} `json:"message"`
+}
+
+type OpenAIUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+
+type OpenAIResponse struct {
+	Choices []OpenAIChoice `json:"choices"`
+	Usage   OpenAIUsage    `json:"usage"`
+}
+
 const (
 	errCodeLLMCall = 600789111
 )
@@ -26,8 +71,10 @@ func main() {
 	// Set the following environment variables first (Assuming you are using a PAT token.).
 	// COZELOOP_WORKSPACE_ID=your workspace id
 	// COZELOOP_API_TOKEN=your token
-	os.Setenv("COZELOOP_WORKSPACE_ID", "7534944671286558755")
-	os.Setenv("COZELOOP_API_TOKEN", "pat_8sGW3PZB9ON8jKfWHKXGuBdv5kRq1aX9Dha3xK7bTHEXY68VJf1koIlwtfrrys9t")
+	// COZELOOP_API_BASE_URL=your base url
+	os.Setenv("COZELOOP_WORKSPACE_ID", "7551727668153024513")
+	os.Setenv("COZELOOP_API_TOKEN", "2a6954061ba505c293f64580293a340de57c3010154087b4e499416da5750976")
+	os.Setenv("COZELOOP_API_BASE_URL", "http://innovate-loop.ttb.test.ke.com")
 
 	// 0. new client span
 	logger.SetLogLevel(logger.LogLevelInfo)
@@ -88,63 +135,110 @@ func (r *llmRunner) llmCall(ctx context.Context) (err error) {
 	ctx, span := r.client.StartSpan(ctx, "llmCall", tracespec.VModelSpanType, nil)
 	defer span.Finish(ctx)
 
-	// llm is processing
-	//baseURL := "https://xxx"
-	//ak := "****"
-	modelName := "gpt-4o-2024-05-13"
-	//maxTokens := 1000 // range: [0, 4096]
-	//transport := &MyTransport{
-	//	DefaultTransport: &http.Transport{},
-	//}
-	//config := openai.DefaultAzureConfig(ak, baseURL)
-	//config.HTTPClient = &http.Client{
-	//	Transport: transport,
-	//}
-	//client := openai.NewClientWithConfig(config)
+	fmt.Println("Starting OpenAI API call...")
 
-	input := "上海天气怎么样？"
-	//resp, err := client.CreateChatCompletion(
-	//	ctx,
-	//	openai.ChatCompletionRequest{
-	//		Model: modelName,
-	//		Messages: []openai.ChatCompletionMessage{
-	//			{
-	//				Role:    "user",
-	//				Content: input,
-	//			},
-	//		},
-	//		MaxTokens: maxTokens,
-	//	},
-	//)
+	// Real OpenAI API call
+	apiURL := "https://openapi-ait.ke.com/v1/chat/completions"
+	apiKey := "c5959d3b-91d2-47f7-8d58-9516c6174cf3"
+	modelName := "deepseek-chat"
 
-	// mock resp
-	time.Sleep(1 * time.Second)
-	respChoices := []string{
-		"上海天气晴朗，气温25摄氏度。",
+	// Prepare the request payload - simple text only
+	input := "你好"
+	requestPayload := OpenAIRequest{
+		Model: modelName,
+		Messages: []OpenAIMessage{
+			{
+				Role: "user",
+				Content: []interface{}{
+					TextContent{
+						Type: "text",
+						Text: input,
+					},
+				},
+			},
+		},
 	}
-	respPromptTokens := 11
-	respCompletionTokens := 52
 
-	// set tag key: `input`
+	// Convert to JSON
+	jsonData, err := json.Marshal(requestPayload)
+	if err != nil {
+		fmt.Printf("Failed to marshal request: %v\n", err)
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+	fmt.Printf("Request payload prepared, size: %d bytes\n", len(jsonData))
+
+	// Create HTTP request
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Failed to create request: %v\n", err)
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	fmt.Println("Making HTTP request to OpenAI...")
+
+	// Make the request
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("HTTP request failed: %v\n", err)
+		return fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Record first response time
+	firstRespTime := time.Now()
+	fmt.Printf("Received response with status: %d\n", resp.StatusCode)
+
+	// Read response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Failed to read response body: %v\n", err)
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("API error response: %s\n", string(body))
+		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response
+	var openaiResp OpenAIResponse
+	err = json.Unmarshal(body, &openaiResp)
+	if err != nil {
+		fmt.Printf("Failed to unmarshal response: %v\n", err)
+		fmt.Printf("Response body: %s\n", string(body))
+		return fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	// Extract response content
+	var respChoices []string
+	for _, choice := range openaiResp.Choices {
+		respChoices = append(respChoices, choice.Message.Content)
+	}
+
+	// Print success info for verification
+	fmt.Printf("OpenAI API call successful!\n")
+	fmt.Printf("Input: %s\n", input)
+	fmt.Printf("Output: %v\n", respChoices)
+	fmt.Printf("Token usage - Prompt: %d, Completion: %d, Total: %d\n",
+		openaiResp.Usage.PromptTokens, openaiResp.Usage.CompletionTokens, openaiResp.Usage.TotalTokens)
+
+	// Set span tags with real data
 	span.SetInput(ctx, input)
-	// set tag key: `output`
 	span.SetOutput(ctx, respChoices)
-	// set tag key: `model_provider`, e.g., openai, etc.
 	span.SetModelProvider(ctx, "openai")
-	// set tag key: `start_time_first_resp`
-	// Timestamp of the first packet return from LLM, unit: microseconds.
-	// When `start_time_first_resp` is set, a tag named `latency_first_resp` calculated
-	// based on the span's StartTime will be added, meaning the latency for the first packet.
-	span.SetStartTimeFirstResp(ctx, time.Now().UnixMicro())
-	// set tag key: `input_tokens`. The amount of input tokens.
-	// when the `input_tokens` value is set, it will automatically sum with the `output_tokens` to calculate the `tokens` tag.
-	span.SetInputTokens(ctx, respPromptTokens)
-	// set tag key: `output_tokens`. The amount of output tokens.
-	// when the `output_tokens` value is set, it will automatically sum with the `input_tokens` to calculate the `tokens` tag.
-	span.SetOutputTokens(ctx, respCompletionTokens)
-	// set tag key: `model_name`, e.g., gpt-4-1106-preview, etc.
+	span.SetStartTimeFirstResp(ctx, firstRespTime.UnixMicro())
+	span.SetInputTokens(ctx, openaiResp.Usage.PromptTokens)
+	span.SetOutputTokens(ctx, openaiResp.Usage.CompletionTokens)
 	span.SetModelName(ctx, modelName)
 
+	fmt.Println("Span tags set successfully")
 	return nil
 }
 
