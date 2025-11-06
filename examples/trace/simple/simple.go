@@ -65,6 +65,7 @@ type OpenAIResponse struct {
 
 const (
 	errCodeLLMCall = 600789111
+	systemPrompt   = "你是一个房产领域专家，会解决任何房产问题。"
 )
 
 func main() {
@@ -92,7 +93,7 @@ func main() {
 	ctx, span := client.StartSpan(ctx, "root_span", "main_span", nil)
 
 	// Set root span input - user's original query
-	userQuery := "你好"
+	userQuery := "北京的房价是多少"
 	span.SetInput(ctx, userQuery)
 
 	// 2. span set tag or baggage
@@ -157,10 +158,19 @@ func (r *llmRunner) llmCall(ctx context.Context, input string, output *[]string)
 	apiKey := "c5959d3b-91d2-47f7-8d58-9516c6174cf3"
 	modelName := "deepseek-chat"
 
-	// Prepare the request payload - simple text only
+	// Prepare the request payload - with system prompt and user question
 	requestPayload := OpenAIRequest{
 		Model: modelName,
 		Messages: []OpenAIMessage{
+			{
+				Role: "system",
+				Content: []interface{}{
+					TextContent{
+						Type: "text",
+						Text: systemPrompt,
+					},
+				},
+			},
 			{
 				Role: "user",
 				Content: []interface{}{
